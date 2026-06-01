@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vivid machines. — Grower ROI Tool v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- App bar -->
+<div class="app-bar">
+  <div style="display:flex;align-items:center;gap:16px">
+    <span class="app-bar-logo">vivid machines.</span>
+    <span class="app-bar-title">Grower ROI Tool — Crop Load &amp; Forecasting</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="btn-secondary" onclick="resetDefaults()">Reset defaults</button>
+    <button class="btn-pdf" onclick="window.print()">⬇ Download PDF</button>
+  </div>
+</div>
+
+<div class="columns">
+
+<!-- ══ LEFT: Calculator ══ -->
+<div class="col-calc">
+
+  <!-- Region selector -->
+  <div class="section-label">Region</div>
+  <div class="field-group" style="padding:10px 14px">
+    <div class="region-bar">
+      <button class="region-btn active" id="rbtn-WA" onclick="applyRegion('WA')">WA <span style="font-weight:400;opacity:.6">Washington</span></button>
+      <button class="region-btn" id="rbtn-NY" onclick="applyRegion('NY')">NY <span style="font-weight:400;opacity:.6">New York</span></button>
+      <button class="region-btn" id="rbtn-MX" onclick="applyRegion('MX')">MX <span style="font-weight:400;opacity:.6">Mexico</span></button>
+      <button class="region-btn" id="rbtn-MI" onclick="applyRegion('MI')">MI <span style="font-weight:400;opacity:.6">Michigan</span></button>
+      <button class="region-btn" id="rbtn-ON" onclick="applyRegion('ON')">ON <span style="font-weight:400;opacity:.6">Ontario</span></button>
+    </div>
+    <div id="region-note" style="font-size:10px;color:#5454E7;font-weight:600"></div>
+    <div class="unit-toggle" style="margin-top:8px;padding-top:8px;border-top:0.5px solid #E8E8F0">
+      <span class="unit-toggle-label">Area units:</span>
+      <button class="unit-toggle-btn active" id="unit-ac" onclick="setUnit('ac')">Acres</button>
+      <button class="unit-toggle-btn" id="unit-ha" onclick="setUnit('ha')">Hectares</button>
+    </div>
+  </div>
+
+  <!-- Grower name -->
+  <div class="section-label">Grower</div>
+  <div class="field-group">
+    <div class="field-label">Organization name</div>
+    <input type="text" id="grower_name" placeholder="Grower Organization">
+  </div>
+
+  <!-- Farm-wide inputs -->
+  <div class="section-label">Operation defaults</div>
+  <div class="field-group">
+    <div class="field-3">
+      <div><div class="field-label"><span id="lbl-tpa">Trees per acre</span></div><input type="number" id="tpa" value="1200" min="50" max="2000" step="10"></div>
+      <div><div class="field-label">Labor rate ($/hr)</div><input type="number" id="labor" value="20.27" min="12" max="80" step="0.01"></div>
+      <div><div class="field-label">XV lease ($/yr)</div><input type="number" id="lease" value="25000" min="1000" max="250000" step="500"></div>
+    </div>
+    <div id="farm-summary" class="farm-summary"></div>
+  </div>
+
+  <!-- Variety blocks -->
+  <div class="section-label">Variety blocks</div>
+  <div class="field-group" style="padding-bottom:8px">
+    <table class="variety-table">
+      <thead>
+        <tr>
+          <th style="width:32%">Block / variety</th>
+          <th style="width:18%" id="lbl-calc-acres">Acres</th>
+          <th style="width:22%">$/bin</th>
+          <th style="width:18%" id="lbl-bins-col">Bins/acre</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="variety-body"></tbody>
+    </table>
+    <button class="btn-add" id="btn-add-variety" onclick="addVariety()">+ Add variety block</button>
+  </div>
+
+  <!-- Use case tabs -->
+  <div class="section-label">Use case assumptions</div>
+  <div class="uc-tabs">
+    <div class="uc-tab-wrap">
+      <button class="uc-tab active" id="tab0" onclick="setTab(0)">Crop load</button>
+      <button class="uc-tab-na" id="na0" onclick="toggleNA(0)" title="Mark as N/A">N/A</button>
+    </div>
+    <div class="uc-tab-wrap">
+      <button class="uc-tab" id="tab1" onclick="setTab(1)">Spray thin.</button>
+      <button class="uc-tab-na" id="na1" onclick="toggleNA(1)" title="Mark as N/A">N/A</button>
+    </div>
+    <div class="uc-tab-wrap">
+      <button class="uc-tab" id="tab2" onclick="setTab(2)">Fertilizer</button>
+      <button class="uc-tab-na" id="na2" onclick="toggleNA(2)" title="Mark as N/A">N/A</button>
+    </div>
+    <div class="uc-tab-wrap">
+      <button class="uc-tab" id="tab3" onclick="setTab(3)">Yield fcst.</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- ── Panel 0: Crop Load Management ── -->
+  <div class="uc-panel active" id="panel0">
+    <div class="na-overlay" id="na-overlay-0"><span>Crop Load Management marked as N/A</span><button onclick="toggleNA(0)">Re-enable</button></div>
+    <div class="uc-roi-line"><span class="uc-roi-label">Crop load management ROI</span><span class="uc-roi-value" id="clm_total">—</span></div>
+    <div style="font-size:10px;font-weight:700;color:#1F1F3B;opacity:.5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Pruning</div>
+    <div class="field-group">
+      <div class="field-2" style="margin-bottom:0">
+        <div><div class="field-label"><span id="lbl-prune-ac">Pruning cost / acre ($)</span></div><input type="number" id="clm_prune_ac" value="320" min="10" max="2000" step="10"></div>
+        <div><div class="field-label">Crew efficiency gain from per-tree targets (%)</div><input type="number" id="clm_prune_eff" value="20" min="1" max="50" step="1"></div>
+      </div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#1F1F3B;opacity:.5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:4px">Hand thinning</div>
+    <div class="field-group">
+      <div class="field-2" style="margin-bottom:8px">
+        <div><div class="field-label"><span id="lbl-ht-ac">Hand thinning cost / acre ($)</span></div><input type="number" id="clm_ht_ac" value="1000" min="10" max="2000" step="10"></div>
+        <div><div class="field-label">Skip rate — trees already at target (%)</div><input type="number" id="clm_ht_skip" value="22" min="1" max="60" step="1"></div>
+      </div>
+      <div><div class="field-label">Crew efficiency gain on remaining trees (%)</div><input type="number" id="clm_ht_eff" value="15" min="1" max="40" step="1"></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#1F1F3B;opacity:.5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:4px">Pack-out / size premium</div>
+    <div class="field-group">
+      <div><div class="field-label">Pack-out / size premium from crop load management (%)</div><input type="number" id="clm_prem" value="7" min="0" max="20" step="1"></div>
+    </div>
+    <div class="bd-line"><span>Pruning labor savings</span><span id="clm_prune_out">—</span></div>
+    <div class="bd-line"><span>Hand thinning labor savings</span><span id="clm_ht_out">—</span></div>
+    <div class="bd-line"><span>Pack-out / size premium</span><span id="clm_prem_out">—</span></div>
+  </div>
+
+  <!-- ── Panel 1: Spray Thinning (unchanged) ── -->
+  <div class="uc-panel" id="panel1">
+    <div class="na-overlay" id="na-overlay-1"><span>Spray thinning marked as N/A</span><button onclick="toggleNA(1)">Re-enable</button></div>
+    <div class="uc-roi-line"><span class="uc-roi-label">Total spray thinning ROI</span><span class="uc-roi-value" id="sp_total">—</span></div>
+    <div class="field-group">
+      <div class="field-2" style="margin-bottom:8px">
+        <div><div class="field-label">Number of passes</div><input type="number" id="s_passes" value="2" min="1" max="5" step="1"></div>
+        <div><div class="field-label"><span id="lbl-pgr-ac">PGR input cost / acre / pass ($)</span></div><input type="number" id="s_pgr" value="55" min="5" max="300" step="5"></div>
+      </div>
+      <div class="field-2" style="margin-bottom:8px">
+        <div><div class="field-label">Tractor + operator rate ($/hr)</div><input type="number" id="s_tractor" value="85" min="20" max="300" step="5"></div>
+        <div><div class="field-label"><span id="lbl-app-ac">Application cost / acre / pass ($)</span></div><input type="number" id="s_app_calc" value="" min="0" style="background:#F7F7FF;color:#5454E7" readonly></div>
+      </div>
+      <div class="field-2" style="margin-bottom:8px">
+        <div><div class="field-label"><span id="lbl-pgr-total">Total PGR program cost / acre ($)</span></div><input type="number" id="s_chem" value="160" min="10" max="1000" step="5" readonly style="background:#F7F7FF;color:#5454E7"></div>
+        <div><div class="field-label">Input reduction from targeting (%)</div><input type="number" id="s_red" value="18" min="1" max="50" step="1"></div>
+      </div>
+      <div><div class="field-label">Pack-out improvement from better set uniformity (%)</div><input type="number" id="s_pack" value="4" min="1" max="20" step="1"></div>
+    </div>
+    <div class="bd-line"><span>PGR &amp; application savings</span><span id="sp_app">—</span></div>
+    <div class="bd-line"><span>Pack-out improvement</span><span id="sp_pack">—</span></div>
+  </div>
+
+  <!-- ── Panel 2: Fertilizer (unchanged) ── -->
+  <div class="uc-panel" id="panel2">
+    <div class="na-overlay" id="na-overlay-2"><span>Fertilizer marked as N/A</span><button onclick="toggleNA(2)">Re-enable</button></div>
+    <div class="uc-roi-line"><span class="uc-roi-label">Total fertilizer ROI</span><span class="uc-roi-value" id="ft_total">—</span></div>
+    <div class="field-group">
+      <div style="margin-bottom:8px"><div class="field-label"><span id="lbl-fert-ac">Annual fertilizer &amp; nutrition cost / acre ($)</span></div><input type="number" id="f_cost" value="350" min="10" max="800" step="10"></div>
+      <div style="margin-bottom:8px"><div class="field-label">Input reduction from targeted application (%)</div><input type="number" id="f_red" value="20" min="1" max="50" step="1"></div>
+      <div><div class="field-label">Yield improvement in targeted areas (%)</div><input type="number" id="f_yield" value="3" min="1" max="15" step="1"></div>
+    </div>
+    <div class="bd-line"><span>Input cost savings</span><span id="ft_save">—</span></div>
+    <div class="bd-line"><span>Yield improvement value</span><span id="ft_yield_out">—</span></div>
+  </div>
+
+  <!-- ── Panel 3: Yield Forecasting ── -->
+  <div class="uc-panel" id="panel3">
+    <div class="uc-roi-line"><span class="uc-roi-label">Yield forecasting ROI</span><span class="uc-roi-value" id="yf_total">—</span></div>
+
+    <!-- Storage optimization -->
+    <div class="yf-subsec-header">
+      <span class="yf-subsec-label">Storage optimization</span>
+      <button class="yf-na-btn" id="yf-na-store" onclick="toggleYFSub('store')">N/A</button>
+    </div>
+    <div id="yf-body-store">
+      <div class="field-group">
+        <div class="field-2" style="margin-bottom:8px">
+          <div><div class="field-label">Storage cost ($/bin/month)</div><input type="number" id="yf_store_cost" value="4.50" min="0.5" max="30" step="0.5"></div>
+          <div><div class="field-label">Avg storage duration (months)</div><input type="number" id="yf_store_months" value="4" min="1" max="12" step="0.5"></div>
+        </div>
+        <div class="field-2" style="margin-bottom:0">
+          <div><div class="field-label">Over-booking reduction from accurate forecast (%)</div><input type="number" id="yf_store_over" value="15" min="1" max="50" step="1"></div>
+          <div><div class="field-label">Spoilage reduction from better CA timing (%)</div><input type="number" id="yf_store_spoil" value="2" min="0" max="15" step="1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="yf-na-overlay" id="yf-overlay-store">Storage optimization marked as N/A<br><button onclick="toggleYFSub('store')">Re-enable</button></div>
+    <div class="bd-line" id="yf-bdline-store1"><span>Storage over-booking savings</span><span id="yf_store_out">—</span></div>
+    <div class="bd-line" id="yf-bdline-store2"><span>Spoilage reduction value</span><span id="yf_spoil_out">—</span></div>
+
+    <!-- Picking efficiency -->
+    <div class="yf-subsec-header" style="margin-top:8px">
+      <span class="yf-subsec-label">Picking efficiency</span>
+      <button class="yf-na-btn" id="yf-na-pk" onclick="toggleYFSub('pk')">N/A</button>
+    </div>
+    <div id="yf-body-pk">
+      <div class="field-group">
+        <div class="field-2" style="margin-bottom:8px">
+          <div><div class="field-label">Crew mobilization cost / pass ($)</div><input type="number" id="yf_pk_mob" value="1800" min="100" max="20000" step="100"></div>
+          <div><div class="field-label">Avg pick passes per block (current)</div><input type="number" id="yf_pk_passes" value="3" min="1" max="8" step="1"></div>
+        </div>
+        <div class="field-2" style="margin-bottom:0">
+          <div><div class="field-label">Pass reduction with XV maturity data (%)</div><input type="number" id="yf_pk_red" value="25" min="5" max="60" step="1"></div>
+          <div><div class="field-label">Harvest timing / maturity pack-out premium (%)</div><input type="number" id="yf_pk_prem" value="3" min="0" max="15" step="1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="yf-na-overlay" id="yf-overlay-pk">Picking efficiency marked as N/A<br><button onclick="toggleYFSub('pk')">Re-enable</button></div>
+    <div class="bd-line" id="yf-bdline-pk1"><span>Picking pass savings</span><span id="yf_pk_out">—</span></div>
+    <div class="bd-line" id="yf-bdline-pk2"><span>Harvest timing premium</span><span id="yf_pktiming_out">—</span></div>
+
+    <!-- Packaging optimization -->
+    <div class="yf-subsec-header" style="margin-top:8px">
+      <span class="yf-subsec-label">Packaging optimization</span>
+      <button class="yf-na-btn" id="yf-na-pkg" onclick="toggleYFSub('pkg')">N/A</button>
+    </div>
+    <div id="yf-body-pkg">
+      <div class="field-group">
+        <div class="field-2" style="margin-bottom:8px">
+          <div><div class="field-label"><span id="lbl-pkg-ac">Packaging cost / acre ($)</span></div><input type="number" id="yf_pkg_ac" value="120" min="10" max="600" step="10"></div>
+          <div><div class="field-label">Rush sourcing premium (% over standard cost)</div><input type="number" id="yf_pkg_rush" value="18" min="1" max="50" step="1"></div>
+        </div>
+        <div class="field-2" style="margin-bottom:0">
+          <div><div class="field-label">% of packaging currently ordered on short notice</div><input type="number" id="yf_pkg_pct" value="25" min="1" max="80" step="1"></div>
+          <div><div class="field-label">Retailer spec penalty ($/bin off-grade)</div><input type="number" id="yf_pkg_pen" value="3.50" min="0" max="20" step="0.5"></div>
+        </div>
+        <div style="margin-top:8px"><div class="field-label">Improvement in hitting retailer size/grade specs (%)</div><input type="number" id="yf_pkg_spec" value="30" min="5" max="80" step="5"></div>
+      </div>
+    </div>
+    <div class="yf-na-overlay" id="yf-overlay-pkg">Packaging optimization marked as N/A<br><button onclick="toggleYFSub('pkg')">Re-enable</button></div>
+    <div class="bd-line" id="yf-bdline-pkg1"><span>Packaging rush savings</span><span id="yf_pkg_out">—</span></div>
+    <div class="bd-line" id="yf-bdline-pkg2"><span>Retailer spec improvement</span><span id="yf_spec_out">—</span></div>
+  </div>
+  <!-- Summary -->
+  <div class="calc-summary">
+    <div class="cs-grid">
+      <div><div class="cs-label">Gross value</div><div class="cs-value" style="color:white" id="cs_gross">—</div></div>
+      <div><div class="cs-label">XV lease</div><div class="cs-value" style="color:#FF7961" id="cs_xv">—</div></div>
+      <div><div class="cs-label">Net ROI</div><div class="cs-value" id="cs_net">—</div></div>
+      <div><div class="cs-label" id="lbl-cs-acre">Per acre</div><div class="cs-value" style="color:#E7E754" id="cs_acre">—</div></div>
+    </div>
+  </div>
+
+</div><!-- /col-calc -->
+
+<!-- ══ RIGHT: Preview ══ -->
+<div class="col-preview">
+  <div class="preview-label">Live preview — updates as you type</div>
+  <div class="onepager">
+
+    <!-- Header -->
+    <div class="op-header">
+      <div class="op-logo">vivid machines.</div>
+      <div>
+        <div class="op-doc-title" id="op_grower_name">Season ROI Summary</div>
+        <div class="op-doc-sub">Apple Operations · XV System · 2026</div>
+      </div>
+    </div>
+
+    <!-- Profile strip -->
+    <div class="op-profile">
+      <div class="op-pi"><div class="op-pi-label" id="lbl-op-acres">Total acres</div><div class="op-pi-value" id="op_acres">—</div></div>
+      <div class="op-pi"><div class="op-pi-label">Total trees</div><div class="op-pi-value" id="op_trees">—</div></div>
+      <div class="op-pi"><div class="op-pi-label">Varieties</div><div class="op-pi-value" id="op_varieties">—</div></div>
+      <div class="op-pi"><div class="op-pi-label">Region</div><div class="op-pi-value" id="op_region_label">—</div></div>
+      <div class="op-pi"><div class="op-pi-label" id="lbl-op-bins">Avg bins / acre</div><div class="op-pi-value" id="op_bins">—</div></div>
+    </div>
+
+    <!-- Intro -->
+    <div class="op-intro">The XV system scans every tree in your operation — capturing bud counts, fruit counts, fruit sizes, and tree vigor at centimetre-level resolution. The figures below show what that per-tree data is worth across your variety blocks and four highest-impact management decisions this season.</div>
+
+    <!-- Variety blocks table -->
+    <div class="op-section-label">Variety blocks</div>
+    <table class="op-variety-table" id="op_variety_table">
+      <thead><tr>
+        <th>Block / variety</th>
+        <th id="lbl-vt-acres">Acres</th>
+        <th id="lbl-vt-bins-ac">Bins / acre</th>
+        <th>Fruit returns ($/bin)</th>
+        <th>Revenue baseline</th>
+        <th>Block ROI</th>
+      </tr></thead>
+      <tbody id="op_variety_body"></tbody>
+    </table>
+
+    <!-- Use case cards -->
+    <div class="op-section-label">ROI by use case — all blocks combined</div>
+    <div class="op-uc-grid">
+
+      <div class="op-uc-card" id="op-card-clm">
+        <div class="op-uc-header"><span class="op-uc-name">Crop load management</span><span class="op-uc-roi" id="op_clm_roi">—</span></div>
+        <div class="op-uc-body">Per-tree bud counts, fruit counts and sizes guide both pruning crews and hand thinners to every tree that needs attention — and away from those that don't. Better crop load means better fruit size and better pack-out across every variety block.</div>
+        <div class="op-pills"><span class="op-pill">Tree counts</span><span class="op-pill">Per-tree bud counts</span><span class="op-pill">Fruit counts and sizes 20mm+</span><span class="op-pill">Skip routing</span><span class="op-pill">Task maps</span><span class="op-pill">Job exports</span></div>
+        <div class="op-breakdown">
+          <div class="op-bd-row"><span>Pruning labor savings</span><span id="op_clm_prune">—</span></div>
+          <div class="op-bd-row"><span>Hand thinning labor savings</span><span id="op_clm_ht">—</span></div>
+          <div class="op-bd-row"><span>Pack-out / size premium</span><span id="op_clm_pp">—</span></div>
+        </div>
+      </div>
+
+      <div class="op-uc-card" id="op-card-sp">
+        <div class="op-uc-header"><span class="op-uc-name">Spray thinning</span><span class="op-uc-roi" id="op_sp_roi">—</span></div>
+        <div class="op-uc-body">Flower cluster counts and fruitlet sizing guide variable-rate PGR application. Fruit Set estimations determine if green thinning is needed and how hard to go.</div>
+        <div class="op-pills"><span class="op-pill">Flower cluster counts</span><span class="op-pill">Fruitlet counts and sizes</span><span class="op-pill">Fruit Set predictions</span><span class="op-pill">VRA shapefiles</span><span class="op-pill">Task maps</span></div>
+        <div class="op-breakdown">
+          <div class="op-bd-row"><span>PGR &amp; application savings</span><span id="op_sp_chem">—</span></div>
+          <div class="op-bd-row"><span>Pack-out improvement</span><span id="op_sp_pack">—</span></div>
+        </div>
+      </div>
+
+      <div class="op-uc-card" id="op-card-ft">
+        <div class="op-uc-header"><span class="op-uc-name">Fertilizer &amp; inputs</span><span class="op-uc-roi" id="op_ft_roi">—</span></div>
+        <div class="op-uc-body">Vigor and custom metric maps such as fruit count/vigor identify where inputs are wasted and where trees are under-supported. Shapefile exports feed directly into VRA equipment.</div>
+        <div class="op-pills"><span class="op-pill">Vigor maps</span><span class="op-pill">Custom metric maps e.g. fruit count/vigor</span><span class="op-pill">VRA shapefile exports</span></div>
+        <div class="op-breakdown">
+          <div class="op-bd-row"><span>Input cost savings</span><span id="op_ft_save">—</span></div>
+          <div class="op-bd-row"><span>Yield improvement value</span><span id="op_ft_yield">—</span></div>
+        </div>
+      </div>
+
+      <div class="op-uc-card" id="op-card-yf" style="grid-column:1/-1">
+        <div class="op-uc-header"><span class="op-uc-name">Yield forecasting</span><span class="op-uc-roi" id="op_yf_roi">—</span></div>
+        <div class="op-uc-body">XV provides accurate yield, size, and maturity forecasts weeks before harvest — enabling smarter storage booking, better-timed picking, and optimized packaging orders that reduce rush sourcing and retailer spec penalties.</div>
+        <div class="op-pills"><span class="op-pill">Yield forecasting</span><span class="op-pill">Size distribution predictions</span><span class="op-pill">Maturity &amp; color predictions</span><span class="op-pill">Block-level harvest readiness</span><span class="op-pill">Job exports for crew routing</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 20px" class="op-breakdown">
+          <div>
+            <div id="op-yf-store-block"><div id="op-yf-store" style="font-size:9px;font-weight:700;color:#5454E7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:6px">Storage</div>
+            <div class="op-bd-row"><span>Over-booking savings</span><span id="op_yf_store">—</span></div>
+            <div class="op-bd-row"><span>Spoilage reduction</span><span id="op_yf_spoil">—</span></div>
+          </div>
+          </div>
+          <div>
+            <div id="op-yf-pk-block"><div id="op-yf-pk" style="font-size:9px;font-weight:700;color:#5454E7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:6px">Picking</div>
+            <div class="op-bd-row"><span>Fewer pass savings</span><span id="op_yf_pk">—</span></div>
+            <div class="op-bd-row"><span>Maturity timing premium</span><span id="op_yf_pktiming">—</span></div>
+          </div>
+          </div>
+          <div>
+            <div id="op-yf-pkg-block"><div id="op-yf-pkg" style="font-size:9px;font-weight:700;color:#5454E7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:6px">Packaging</div>
+            <div class="op-bd-row"><span>Rush sourcing savings</span><span id="op_yf_pkg">—</span></div>
+            <div class="op-bd-row"><span>Retailer spec improvement</span><span id="op_yf_spec">—</span></div>
+          </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAGE 2 -->
+    <div class="op-page2">
+      <div class="op-p2-header" style="display:none;justify-content:space-between;align-items:baseline;padding-bottom:10px;border-bottom:2px solid #5454E7;margin-bottom:16px">
+        <span style="font-size:14px;font-weight:700;color:#5454E7;letter-spacing:.02em">vivid machines.</span>
+        <span id="op_p2_grower" style="font-size:11px;font-weight:700;color:#1F1F3B"></span>
+      </div>
+
+      <!-- Ranked by variety -->
+      <div class="op-section-label">Ranked by variety — total ROI</div>
+      <table class="op-ranked-table" id="op_ranked_table">
+        <thead><tr>
+          <th>Variety / block</th>
+          <th>Acres</th>
+          <th>Returns ($/bin)</th>
+          <th>Crop load</th>
+          <th>Spray thin.</th>
+          <th>Fertilizer</th>
+          <th>Yield fcst.</th>
+          <th>Total ROI</th>
+          <th>ROI / acre</th>
+        </tr></thead>
+        <tbody id="op_ranked_body"></tbody>
+      </table>
+
+      <!-- Bar chart -->
+      <div class="op-bar-section" id="op_bars"></div>
+
+      <!-- ROI summary -->
+      <div class="op-roi-panel">
+        <div class="op-roi-label">Season ROI summary — all blocks</div>
+        <div class="op-roi-grid">
+          <div class="op-roi-item"><div class="op-roi-item-label">Total gross value</div><div class="op-roi-item-value" style="color:white" id="op_gross">—</div></div>
+          <div class="op-roi-item"><div class="op-roi-item-label">XV system (annual)</div><div class="op-roi-item-value" style="color:#FF7961" id="op_xv">—</div></div>
+          <div class="op-roi-item"><div class="op-roi-item-label">Net ROI</div><div class="op-roi-item-value" id="op_net">—</div></div>
+          <div class="op-roi-item"><div class="op-roi-item-label" id="lbl-roi-per-area">Net ROI per acre</div><div class="op-roi-item-value" style="color:#E7E754" id="op_peracre">—</div></div>
+        </div>
+      </div>
+
+      <!-- Assumptions -->
+      <div class="op-assumptions">
+        <div class="op-section-label" style="margin-bottom:0">Key assumptions</div>
+        <div class="op-assum-grid">
+          <div class="op-assum-row"><span id="lbl-as-tpa">Trees per acre</span><span id="as_tpa">—</span></div>
+          <div class="op-assum-row"><span>Labor rate (H-2A 2026)</span><span id="as_labor">—</span></div>
+          <div class="op-assum-row"><span>PGR thinning program</span><span id="as_spray">—</span></div>
+          <div class="op-assum-row"><span id="lbl-as-prune-ac">Pruning cost / acre</span><span id="as_phrs">—</span></div>
+          <div class="op-assum-row"><span id="lbl-as-fert-ac">Fertilizer &amp; nutrition cost / acre</span><span id="as_fert">—</span></div>
+          <div class="op-assum-row"><span id="lbl-as-acres">Total acres</span><span id="as_acres">—</span></div>
+          <div class="op-assum-row"><span id="lbl-as-ht-ac">Hand thinning cost / acre</span><span id="as_hhrs">—</span></div>
+          <div class="op-assum-row"><span>XV annual lease</span><span id="as_lease">—</span></div>
+          <div class="op-assum-row"><span>Storage cost / bin / month</span><span id="as_store">—</span></div>
+          <div class="op-assum-row"><span id="lbl-as-pkg-ac">Packaging cost / acre</span><span id="as_pkg">—</span></div>
+        </div>
+      </div>
+
+      <!-- Top 3 recommendations -->
+      <div id="op_top3" style="margin-bottom:14px"></div>
+
+      <!-- Footer -->
+      <div class="op-footer">
+        <span>vivid machines. &nbsp;·&nbsp; vividmachines.com</span>
+        <span id="op_footer_name">All figures are estimates based on grower-provided inputs. Actual results vary by season, variety, and management practice.</span>
+      </div>
+    </div><!-- /op-page2 -->
+
+  </div><!-- /onepager -->
+</div><!-- /col-preview -->
+</div><!-- /columns -->
+
+<script>
+var activeTab = 0;
+var varieties = [];
+var varIdCounter = 0;
+
+// Region-specific variety prices {price, bins}
+var REGION_VARIETY_PRESETS = {
+  WA: {
+    'Honeycrisp':       {price:60, bins:50},
+    'Rave':             {price:52, bins:42},
+    'Ambrosia':         {price:55, bins:45},
+    'Jonagold':         {price:28, bins:45},
+    'Cosmic Crisp':     {price:50, bins:50},
+    'Gala':             {price:22, bins:50},
+    'Pink Lady':        {price:55, bins:45},
+    'Golden Delicious': {price:20, bins:50},
+    'Fuji':             {price:38, bins:48},
+    'Granny Smith':     {price:28, bins:45},
+    'Macintosh':        {price:20, bins:40},
+    'Red Delicious':    {price:15, bins:40},
+  },
+  NY: {
+    'Honeycrisp':       {price:55, bins:48},
+    'Rave':             {price:48, bins:40},
+    'Ambrosia':         {price:50, bins:44},
+    'Jonagold':         {price:28, bins:44},
+    'Empire':           {price:28, bins:45},
+    'Cortland':         {price:22, bins:45},
+    'Macintosh':        {price:22, bins:45},
+    'Gala':             {price:20, bins:48},
+    'Fuji':             {price:35, bins:46},
+    'Golden Delicious': {price:18, bins:48},
+    'Red Delicious':    {price:12, bins:42},
+    'Granny Smith':     {price:22, bins:44},
+  },
+  MX: {
+    'Gala':             {price:20,  bins:45},
+    'Golden Delicious': {price:18,  bins:40},
+    'Red Delicious':    {price:14,  bins:40},
+  },
+  MI: {
+    'Honeycrisp':       {price:55, bins:45},
+    'Rave':             {price:45, bins:40},
+    'Ambrosia':         {price:48, bins:43},
+    'Gala':             {price:24, bins:48},
+    'Fuji':             {price:38, bins:46},
+    'McIntosh':         {price:22, bins:45},
+    'Empire':           {price:28, bins:45},
+    'Jonagold':         {price:28, bins:44},
+    'Paula Red':        {price:22, bins:42},
+    'Golden Delicious': {price:20, bins:48},
+    'Red Delicious':    {price:15, bins:40},
+  },
+  ON: {
+    'Honeycrisp':       {price:52, bins:48},
+    'Rave':             {price:52, bins:42},
+    'Ambrosia':         {price:55, bins:45},
+    'Jonagold':         {price:28, bins:44},
+    'Empire':           {price:26, bins:45},
+    'Macintosh':        {price:22, bins:45},
+    'Cortland':         {price:20, bins:44},
+    'Gala':             {price:20, bins:48},
+    'Fuji':             {price:35, bins:46},
+    'Golden Delicious': {price:18, bins:48},
+    'Red Delicious':    {price:15, bins:42},
+    'Granny Smith':     {price:22, bins:44},
+  },
+};
+
+var REGION_DATA = {
+  WA: { label:'Washington State', currency:'USD', labor:20.27, tractor:85, pgr:55, fert:350,
+        defaultVarieties: [{name:'Honeycrisp',acres:80},{name:'Cosmic Crisp',acres:70},{name:'Gala',acres:100}] },
+  NY: { label:'New York State',   currency:'USD', labor:17.87, tractor:78, pgr:55, fert:320,
+        defaultVarieties: [{name:'Honeycrisp',acres:50},{name:'Empire',acres:60},{name:'McIntosh',acres:50}] },
+  MX: { label:'Mexico (Chihuahua)', currency:'USD', labor:3.00, tractor:30, pgr:56, fert:265,
+        defaultVarieties: [{name:'Gala',acres:100},{name:'Golden Delicious',acres:80},{name:'Red Delicious',acres:80}] },
+  MI: { label:'Michigan',         currency:'USD', labor:17.09, tractor:75, pgr:52, fert:310,
+        defaultVarieties: [{name:'Honeycrisp',acres:60},{name:'Gala',acres:80},{name:'McIntosh',acres:60}] },
+  ON: { label:'Ontario',          currency:'CAD', labor:19.00, tractor:88, pgr:65, fert:390,
+        defaultVarieties: [{name:'Honeycrisp',acres:50},{name:'Empire',acres:60},{name:'Macintosh',acres:50}] },
+};
+
+var currentRegion = 'WA';
+
+// Merge all variety names for datalist
+var VARIETY_PRESETS = {};
+Object.keys(REGION_VARIETY_PRESETS).forEach(function(r){
+  Object.keys(REGION_VARIETY_PRESETS[r]).forEach(function(v){
+    if(!VARIETY_PRESETS[v]) VARIETY_PRESETS[v] = REGION_VARIETY_PRESETS[r][v];
+  });
+});
+
+var DEFAULTS = {
+  tpa:1200, labor:20.27, lease:25000,
+  p_hrs:20, p_eff:20, p_prem:5,
+  s_passes:2, s_pgr:55, s_tractor:85, s_red:18, s_pack:4,
+  pk_passes:3, pk_red:25, pk_crew:20, pk_hrs:8, pk_prem:3,
+  h_hrs:20, h_skip:22, h_eff:15, h_prem:7,
+  f_cost:350, f_red:20, f_yield:3
+};
+
+var DEFAULT_VARIETIES = [
+  {name:'Honeycrisp', acres:80, price:60, bins:50},
+  {name:'Cosmic Crisp', acres:70, price:50, bins:50},
+  {name:'Gala', acres:100, price:22, bins:50},
+];
+
+var BAR_COLORS = ['#5454E7','#B4BDFF','#FF7961','#E7E754'];
+
+function fmt(n){ n=Math.round(n); return (n<0?'-$':'$')+Math.abs(n).toLocaleString(); }
+function fmtS(n){ n=Math.round(n); if(Math.abs(n)>=1000) return (n<0?'-$':'$')+(Math.abs(n)/1000).toFixed(1)+'K'; return fmt(n); }
+function v(id){ return parseFloat(document.getElementById(id).value)||0; }
+function set(id,val){ var e=document.getElementById(id); if(e) e.textContent=val; }
+
+var naState = [false, false, false, false];
+
+var yfNaState = {store: false, pk: false, pkg: false};
+
+function toggleYFSub(sub){
+  yfNaState[sub] = !yfNaState[sub];
+  var on = yfNaState[sub];
+  var btn     = document.getElementById('yf-na-'+sub);
+  var body    = document.getElementById('yf-body-'+sub);
+  var overlay = document.getElementById('yf-overlay-'+sub);
+  if(btn)    { btn.classList.toggle('active', on); btn.textContent = on ? 'enabled' : 'N/A'; }
+  if(body)   { body.style.display = on ? 'none' : ''; }
+  if(overlay){ overlay.style.display = on ? 'block' : 'none'; }
+  // Hide/show the corresponding bd-lines
+  ['1','2'].forEach(function(n){
+    var bl = document.getElementById('yf-bdline-'+sub+n);
+    if(bl) bl.style.display = on ? 'none' : '';
+  });
+  updateUnitLabels();
+  calc();
+}
+
+function toggleNA(i){
+  naState[i] = !naState[i];
+  var tab  = document.getElementById('tab'+i);
+  var naBtn= document.getElementById('na'+i);
+  var overlay = document.getElementById('na-overlay-'+i);
+  var panel= document.getElementById('panel'+i);
+
+  if(naState[i]){
+    if(tab)   tab.classList.add('na-tab');
+    if(naBtn){ naBtn.style.color = '#FF7961'; naBtn.textContent = 'enabled'; }
+    if(overlay){ overlay.style.display='flex'; }
+    // Hide panel content but show overlay
+    var children = panel.children;
+    for(var j=0; j<children.length; j++){
+      if(children[j].id !== 'na-overlay-'+i) children[j].style.display='none';
+    }
+    // Switch away from this tab if it's active
+    if(panel.classList.contains('active')){
+      var next = i < 3 ? i+1 : i-1;
+      setTab(next);
+    }
+  } else {
+    if(tab)   tab.classList.remove('na-tab');
+    if(naBtn){ naBtn.style.color = ''; naBtn.textContent = 'N/A'; }
+    if(overlay){ overlay.style.display='none'; }
+    var children = panel.children;
+    for(var j=0; j<children.length; j++){
+      if(children[j].id !== 'na-overlay-'+i) children[j].style.display='';
+    }
+  }
+  calc();
+}
+
+function applyRegion(code){
+  currentRegion = code;
+  var rd = REGION_DATA[code];
+  if(!rd) return;
+  // Update buttons
+  ['WA','NY','MX','MI','ON'].forEach(function(r){
+    var b = document.getElementById('rbtn-'+r);
+    if(b) b.classList.toggle('active', r===code);
+  });
+  // Update inputs
+  document.getElementById('labor').value = rd.labor;
+  document.getElementById('s_tractor').value = rd.tractor;
+  document.getElementById('s_pgr').value = rd.pgr;
+  document.getElementById('f_cost').value = rd.fert;
+  // Region-specific CLM defaults
+  var clmDefaults = {
+    WA: {prune:320,  ht:1000,  store:4.5,  pk_mob:1800,  pkg_ac:120},
+    NY: {prune:300,  ht:1000,  store:4.0,  pk_mob:1600,  pkg_ac:110},
+    MX: {prune:175,  ht:590,   store:3.25, pk_mob:1300,  pkg_ac:105},
+    MI: {prune:300,  ht:1000,  store:4.2,  pk_mob:1700,  pkg_ac:115},
+    ON: {prune:350,  ht:1100,  store:5.0,  pk_mob:2000,  pkg_ac:140},
+  };
+  var clmD = clmDefaults[code] || clmDefaults.WA;
+  var pruneEl    = document.getElementById('clm_prune_ac');
+  var htEl       = document.getElementById('clm_ht_ac');
+  var storeEl    = document.getElementById('yf_store_cost');
+  var pkMobEl    = document.getElementById('yf_pk_mob');
+  var pkgAcEl    = document.getElementById('yf_pkg_ac');
+  if(pruneEl) pruneEl.value = clmD.prune;
+  if(htEl)    htEl.value    = clmD.ht;
+  if(storeEl) storeEl.value = clmD.store;
+  if(pkMobEl) pkMobEl.value = clmD.pk_mob;
+  if(pkgAcEl) pkgAcEl.value = clmD.pkg_ac;
+  // Currency note
+  var note = document.getElementById('region-note');
+  var leaseDefaults = { WA:25000, NY:25000, MX:25000, MI:25000, ON:32000 };
+  var leaseEl = document.getElementById('lease');
+  if(leaseEl) leaseEl.value = leaseDefaults[code] || 25000;
+  if(note) note.innerHTML = rd.label + ' &nbsp;·&nbsp; <span class="currency-badge">'+rd.currency+'</span>';
+  // Update variety prices for existing rows
+  varieties.forEach(function(id){
+    var nameEl = document.getElementById('n-'+id);
+    if(!nameEl) return;
+    var name = nameEl.value.trim();
+    var preset = (REGION_VARIETY_PRESETS[code]||{})[name];
+    if(preset){
+      var priceEl = document.getElementById('p-'+id);
+      var binsEl  = document.getElementById('b-'+id);
+      if(priceEl){ priceEl.value = preset.price; priceEl.dataset.userEdited=''; }
+      if(binsEl) { binsEl.value  = preset.bins;  binsEl.dataset.userEdited=''; }
+    }
+  });
+  calc();
+}
+
+var useHectares = false;
+var HA = 0.404686; // 1 acre = 0.404686 ha
+
+function setUnit(unit){
+  var toHA = (unit === 'ha') && !useHectares;
+  var toAC = (unit === 'ac') && useHectares;
+  if(!toHA && !toAC) return;
+
+  document.getElementById('unit-ac').classList.toggle('active', unit==='ac');
+  document.getElementById('unit-ha').classList.toggle('active', unit==='ha');
+  useHectares = (unit === 'ha');
+  var factor = useHectares ? HA : (1/HA);
+
+  // Convert variety acreage inputs
+  varieties.forEach(function(id){
+    var el = document.getElementById('a-'+id);
+    if(el && el.value) el.value = Math.round(parseFloat(el.value) * factor * 10) / 10;
+  });
+
+  // Convert per-area cost inputs AND bins/area (same direction: $/acre→$/ha and bins/acre→bins/ha both ×2.47)
+  var costFactor = useHectares ? (1/HA) : HA;
+  ['clm_prune_ac','clm_ht_ac','s_pgr','f_cost','yf_pkg_ac'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && el.value && !el.readOnly) {
+      el.value = Math.round(parseFloat(el.value) * costFactor * 100) / 100;
+    }
+  });
+  // Bins per area — same conversion direction as costs
+  varieties.forEach(function(id){
+    var el = document.getElementById('b-'+id);
+    if(el && el.value) el.value = Math.round(parseFloat(el.value) * costFactor * 10) / 10;
+  });
+
+  // Update labels
+  updateUnitLabels();
+  calc();
+}
+
+function updateUnitLabels(){
+  var u = useHectares ? 'hectare' : 'acre';
+  var uShort = useHectares ? 'ha' : 'ac';
+  var uCap = useHectares ? 'Hectares' : 'Acres';
+  var labelMap = {
+    'lbl-tpa':         'Trees per '+u,
+    'lbl-prune-ac':    'Pruning cost / '+u+' ($)',
+    'lbl-ht-ac':       'Hand thinning cost / '+u+' ($)',
+    'lbl-pgr-ac':      'PGR input cost / '+u+' / pass ($)',
+    'lbl-app-ac':      'Application cost / '+u+' / pass ($)',
+    'lbl-pgr-total':   'Total PGR program cost / '+u+' ($)',
+    'lbl-fert-ac':     'Annual fertilizer & nutrition cost / '+u+' ($)',
+    'lbl-pkg-ac':      'Packaging cost / '+u+' ($)',
+    'lbl-bins-col':    'Bins/'+uShort,
+    'lbl-op-acres':    'Total '+uCap.toLowerCase(),
+    'lbl-op-bins':     'Avg bins / '+u,
+    'lbl-roi-per-area':'Net ROI per '+u,
+    'lbl-as-tpa':      'Trees per '+u,
+    'lbl-as-acres':    'Total '+uCap.toLowerCase(),
+    // One-pager tables and sidebar
+    'lbl-vt-acres':    uCap,
+    'lbl-vt-bins-ac':  'Bins / '+u,
+    'lbl-rt-acres':    uCap,
+    'lbl-rt-roi-ac':   'ROI / '+u,
+    'lbl-cs-acre':     'Per '+u,
+    'lbl-calc-acres':  uCap,
+    // Assumption rows
+    'lbl-as-prune-ac': 'Pruning cost / '+u,
+    'lbl-as-fert-ac':  'Fertilizer & nutrition cost / '+u,
+    'lbl-as-ht-ac':    'Hand thinning cost / '+u,
+    'lbl-as-pkg-ac':   'Packaging cost / '+u,
+  };
+  Object.keys(labelMap).forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.textContent = labelMap[id];
+  });
+}
+
+function saveCustomVariety(id){
+  var nameEl  = document.getElementById('n-'+id);
+  var priceEl = document.getElementById('p-'+id);
+  var binsEl  = document.getElementById('b-'+id);
+  if(!nameEl || !priceEl || !binsEl) return;
+  var name  = nameEl.value.trim();
+  var price = parseFloat(priceEl.value);
+  var bins  = parseFloat(binsEl.value);
+  if(!name || !price || !bins) return;
+  // Skip if already a known preset
+  if(VARIETY_PRESETS[name]) return;
+  // Save to session presets
+  VARIETY_PRESETS[name] = {price:price, bins:bins};
+  // Add to datalist if not already there
+  var dl = document.getElementById('variety-list');
+  if(dl){
+    var exists = false;
+    for(var i=0; i<dl.options.length; i++){ if(dl.options[i].value===name){ exists=true; break; } }
+    if(!exists){
+      var opt = document.createElement('option');
+      opt.value = name;
+      dl.appendChild(opt);
+    }
+  }
+}
+
+function autoFillVariety(id){
+  var nameEl = document.getElementById('n-'+id);
+  if(!nameEl) return;
+  var name = nameEl.value.trim();
+  var preset = (REGION_VARIETY_PRESETS[currentRegion]||{})[name] || VARIETY_PRESETS[name];
+  if(preset){
+    var priceEl = document.getElementById('p-'+id);
+    var binsEl  = document.getElementById('b-'+id);
+    if(priceEl && !priceEl.dataset.userEdited) priceEl.value = preset.price;
+    if(binsEl  && !binsEl.dataset.userEdited)  binsEl.value  = preset.bins;
+    calc();
+  }
+}
+
+function addVariety(name, acres, price, bins){
+  if(varieties.length >= 5) return;
+  var id = 'v' + (varIdCounter++);
+  varieties.push(id);
+  var row = document.createElement('tr');
+  row.className = 'variety-row';
+  row.id = 'row-' + id;
+  row.innerHTML =
+    '<td><input type="text" id="n-'+id+'" list="variety-list" placeholder="Select or type variety" value="'+(name||'')+'" autocomplete="off"></td>' +
+    '<td><input type="number" id="a-'+id+'" value="'+(acres||100)+'" min="1" max="5000" step="1" style="text-align:right"></td>' +
+    '<td><input type="number" id="p-'+id+'" value="'+(price||28)+'" min="1" max="500" step="1" style="text-align:right"></td>' +
+    '<td><input type="number" id="b-'+id+'" value="'+(bins||40)+'" min="1" max="200" step="1" style="text-align:right"></td>' +
+    '<td><button class="btn-remove" onclick="removeVariety(\''+id+'\')" title="Remove">×</button></td>';
+  document.getElementById('variety-body').appendChild(row);
+
+  var nameInput = document.getElementById('n-'+id);
+  nameInput.addEventListener('input', function(){ autoFillVariety(id); calc(); });
+  nameInput.addEventListener('change', function(){ autoFillVariety(id); });
+
+  // Mark price/bins as user-edited if they manually change them
+  ['p-'+id, 'b-'+id].forEach(function(fid){
+    var el = document.getElementById(fid);
+    el.addEventListener('input', function(){ this.dataset.userEdited = '1'; calc(); });
+    el.addEventListener('blur',  function(){ saveCustomVariety(id); });
+  });
+  // Also save when name field loses focus (user typed a new name and tabbed away)
+  document.getElementById('n-'+id).addEventListener('blur', function(){ saveCustomVariety(id); });
+  document.getElementById('a-'+id).addEventListener('input', calc);
+
+  updateAddBtn();
+  calc();
+}
+
+function removeVariety(id){
+  varieties = varieties.filter(function(v){ return v!==id; });
+  var row = document.getElementById('row-'+id);
+  if(row) row.remove();
+  updateAddBtn();
+  calc();
+}
+
+function updateAddBtn(){
+  var btn = document.getElementById('btn-add-variety');
+  btn.style.display = varieties.length >= 5 ? 'none' : 'block';
+}
+
+function getVarietyData(){
+  return varieties.map(function(id){
+    return {
+      id: id,
+      name: (document.getElementById('n-'+id)||{}).value || 'Block',
+      acres: parseFloat((document.getElementById('a-'+id)||{}).value)||0,
+      price: parseFloat((document.getElementById('p-'+id)||{}).value)||0,
+      bins:  parseFloat((document.getElementById('b-'+id)||{}).value)||0
+    };
+  });
+}
+
+function calcVarietyROI(vd, tpa, labor,
+    clm_prune_ac, clm_prune_eff, clm_ht_ac, clm_ht_skip, clm_ht_eff, clm_prem,
+    s_passes, s_pgr, s_app_ac, s_red, s_pack,
+    f_cost, f_red, f_yield,
+    yf_store_cost, yf_store_months, yf_store_over, yf_store_spoil,
+    yf_pk_mob, yf_pk_passes, yf_pk_red, yf_pk_prem,
+    yf_pkg_ac, yf_pkg_rush, yf_pkg_pct, yf_pkg_pen, yf_pkg_spec){
+
+  var trees   = vd.acres * tpa;
+  var bins    = vd.acres * vd.bins;
+  var revenue = bins * vd.price;
+
+  // ── Crop load management ──
+  var clm_prune = vd.acres * clm_prune_ac * (clm_prune_eff/100);
+  var clm_ht    = vd.acres * clm_ht_ac * ((clm_ht_skip + clm_ht_eff*(1-clm_ht_skip/100))/100);
+  var clm_pp    = revenue * (clm_prem/100);
+  var clm_tot   = clm_prune + clm_ht + clm_pp;
+
+  // ── Spray thinning ──
+  var s_total_ac   = (s_pgr + s_app_ac) * s_passes;
+  var sp_cs        = vd.acres * s_total_ac * (s_red/100);
+  var sp_po        = revenue * (s_pack/100);
+  var sp_tot       = sp_cs + sp_po;
+
+  // ── Fertilizer ──
+  var ft_is  = vd.acres * f_cost * (f_red/100);
+  var ft_yg  = revenue * (f_yield/100);
+  var ft_tot = ft_is + ft_yg;
+
+  // ── Yield forecasting ──
+  // Storage: savings on over-booked capacity + spoilage avoided
+  var total_store_cost = bins * yf_store_cost * yf_store_months;
+  var yf_store_s = total_store_cost * (yf_store_over/100);
+  var yf_spoil_s = revenue * (yf_store_spoil/100);
+
+  // Picking: mobilization savings + maturity premium
+  // Number of variety blocks (use acres as proxy weight - 1 block per ~50ac)
+  var numBlocks = Math.max(1, Math.round(vd.acres / 50));
+  var yf_pk_s   = numBlocks * yf_pk_mob * yf_pk_passes * (yf_pk_red/100);
+  var yf_pk_pp  = revenue * (yf_pk_prem/100);
+
+  // Packaging: rush sourcing savings + retailer spec penalty reduction
+  var pkg_total_cost = vd.acres * yf_pkg_ac;
+  var yf_pkg_s  = pkg_total_cost * (yf_pkg_pct/100) * (yf_pkg_rush/100);
+  var yf_spec_s = bins * yf_pkg_pen * (yf_pkg_spec/100);
+
+  var yf_tot = yf_store_s + yf_spoil_s + yf_pk_s + yf_pk_pp + yf_pkg_s + yf_spec_s;
+
+  return {
+    trees:trees, revenue:revenue, bins:bins,
+    clm_prune:clm_prune, clm_ht:clm_ht, clm_pp:clm_pp, clm_tot:clm_tot,
+    sp_cs:sp_cs, sp_po:sp_po, sp_tot:sp_tot,
+    ft_is:ft_is, ft_yg:ft_yg, ft_tot:ft_tot,
+    yf_store_s:yf_store_s, yf_spoil_s:yf_spoil_s,
+    yf_pk_s:yf_pk_s, yf_pk_pp:yf_pk_pp,
+    yf_pkg_s:yf_pkg_s, yf_spec_s:yf_spec_s, yf_tot:yf_tot,
+    total: clm_tot + sp_tot + ft_tot + yf_tot
+  };
+}
+
+function calc(){
+  var tpa=v('tpa'), labor=v('labor'), lease=v('lease');
+  var clm_prune_ac=v('clm_prune_ac'), clm_prune_eff=v('clm_prune_eff');
+  var clm_ht_ac=v('clm_ht_ac'), clm_ht_skip=v('clm_ht_skip'), clm_ht_eff=v('clm_ht_eff'), clm_prem=v('clm_prem');
+  var s_passes=v('s_passes'), s_pgr=v('s_pgr'), s_tractor=v('s_tractor'), s_red=v('s_red'), s_pack=v('s_pack');
+  var s_app_ac = s_tractor > 0 ? s_tractor / ((7*5280*12)/43560) : 0;
+  var appCalcEl=document.getElementById('s_app_calc'); if(appCalcEl) appCalcEl.value=s_app_ac.toFixed(2);
+  var s_total_ac_disp=(s_pgr+s_app_ac)*s_passes;
+  var sChemEl=document.getElementById('s_chem'); if(sChemEl) sChemEl.value=s_total_ac_disp.toFixed(2);
+  var f_cost=v('f_cost'), f_red=v('f_red'), f_yield=v('f_yield');
+  var yf_store_cost=v('yf_store_cost'), yf_store_months=v('yf_store_months'), yf_store_over=v('yf_store_over'), yf_store_spoil=v('yf_store_spoil');
+  var yf_pk_mob=v('yf_pk_mob'), yf_pk_passes=v('yf_pk_passes'), yf_pk_red=v('yf_pk_red'), yf_pk_prem=v('yf_pk_prem');
+  var yf_pkg_ac=v('yf_pkg_ac'), yf_pkg_rush=v('yf_pkg_rush'), yf_pkg_pct=v('yf_pkg_pct'), yf_pkg_pen=v('yf_pkg_pen'), yf_pkg_spec=v('yf_pkg_spec');
+
+  var vdata = getVarietyData();
+  var results = vdata.map(function(vd){ return calcVarietyROI(vd,tpa,labor,clm_prune_ac,clm_prune_eff,clm_ht_ac,clm_ht_skip,clm_ht_eff,clm_prem,s_passes,s_pgr,s_app_ac,s_red,s_pack,f_cost,f_red,f_yield,yf_store_cost,yf_store_months,yf_store_over,yf_store_spoil,yf_pk_mob,yf_pk_passes,yf_pk_red,yf_pk_prem,yf_pkg_ac,yf_pkg_rush,yf_pkg_pct,yf_pkg_pen,yf_pkg_spec); });
+  // Zero out N/A use cases
+  results = results.map(function(r){
+    var nr = Object.assign({}, r);
+    if(naState[0]){ nr.clm_prune=0; nr.clm_ht=0; nr.clm_pp=0; nr.clm_tot=0; }
+    if(naState[1]){ nr.sp_cs=0; nr.sp_po=0; nr.sp_tot=0; }
+    if(naState[2]){ nr.ft_is=0; nr.ft_yg=0; nr.ft_tot=0; }
+    if(naState[3] || (yfNaState.store && yfNaState.pk && yfNaState.pkg)){ nr.yf_store_s=0; nr.yf_spoil_s=0; nr.yf_pk_s=0; nr.yf_pk_pp=0; nr.yf_pkg_s=0; nr.yf_spec_s=0; nr.yf_tot=0; } else { if(yfNaState.store){ nr.yf_store_s=0; nr.yf_spoil_s=0; } if(yfNaState.pk){ nr.yf_pk_s=0; nr.yf_pk_pp=0; } if(yfNaState.pkg){ nr.yf_pkg_s=0; nr.yf_spec_s=0; } nr.yf_tot=nr.yf_store_s+nr.yf_spoil_s+nr.yf_pk_s+nr.yf_pk_pp+nr.yf_pkg_s+nr.yf_spec_s; }
+    nr.total = nr.clm_tot + nr.sp_tot + nr.ft_tot + nr.yf_tot;
+    return nr;
+  });
+
+  // Totals
+  var totalAcres=0, totalTrees=0, totalRevenue=0;
+  var clm_prune=0, clm_ht=0, clm_pp=0, clm_tot=0;
+  var sp_cs=0, sp_po=0, sp_tot=0;
+  var ft_is=0, ft_yg=0, ft_tot=0;
+  var yf_store_s=0, yf_spoil_s=0, yf_pk_s=0, yf_pk_pp=0, yf_pkg_s=0, yf_spec_s=0, yf_tot=0;
+  vdata.forEach(function(vd,i){
+    var r=results[i];
+    totalAcres+=vd.acres; totalTrees+=r.trees; totalRevenue+=r.revenue;
+    clm_prune+=r.clm_prune; clm_ht+=r.clm_ht; clm_pp+=r.clm_pp; clm_tot+=r.clm_tot;
+    sp_cs+=r.sp_cs; sp_po+=r.sp_po; sp_tot+=r.sp_tot;
+    ft_is+=r.ft_is; ft_yg+=r.ft_yg; ft_tot+=r.ft_tot;
+    yf_store_s+=r.yf_store_s; yf_spoil_s+=r.yf_spoil_s;
+    yf_pk_s+=r.yf_pk_s; yf_pk_pp+=r.yf_pk_pp;
+    yf_pkg_s+=r.yf_pkg_s; yf_spec_s+=r.yf_spec_s; yf_tot+=r.yf_tot;
+  });
+  var gross = clm_tot + sp_tot + ft_tot + yf_tot;
+  var net = gross - lease;
+
+  // ── Sidebar ──
+  document.getElementById('farm-summary').innerHTML =
+    Math.round(totalTrees).toLocaleString()+' trees &nbsp;·&nbsp; '+displayAcres+(useHectares?' ha':' ac');
+
+  set('clm_total', fmt(clm_tot)); set('clm_prune_out', fmt(clm_prune)); set('clm_ht_out', fmt(clm_ht)); set('clm_prem_out', fmt(clm_pp));
+  set('sp_total', fmt(sp_tot)); set('sp_app', fmt(sp_cs)); set('sp_pack', fmt(sp_po));
+  set('ft_total', fmt(ft_tot)); set('ft_save', fmt(ft_is)); set('ft_yield_out', fmt(ft_yg));
+  set('yf_total', fmt(yf_tot));
+  set('yf_store_out', fmt(yf_store_s)); set('yf_spoil_out', fmt(yf_spoil_s));
+  set('yf_pk_out', fmt(yf_pk_s)); set('yf_pktiming_out', fmt(yf_pk_pp));
+  set('yf_pkg_out', fmt(yf_pkg_s)); set('yf_spec_out', fmt(yf_spec_s));
+  set('cs_gross', fmt(gross)); set('cs_xv', fmt(lease)); set('cs_acre', totalAcres>0?fmt(Math.round(net/totalAcres)):'—');
+  document.getElementById('cs_net').textContent = fmt(net);
+  document.getElementById('cs_net').style.color = net>=0?'#E7E754':'#FF7961';
+
+  // ── Preview: profile ──
+  var gname = document.getElementById('grower_name').value.trim();
+  var nameEl = document.getElementById('op_grower_name');
+  nameEl.textContent = gname || 'Season ROI Summary';
+  set('op_p2_grower', gname ? 'Season ROI Summary · '+gname : 'Season ROI Summary');
+  var footerEl = document.getElementById('op_footer_name');
+  footerEl.textContent = (gname ? gname+' · ' : '') + 'All figures are estimates based on grower-provided inputs. Actual results vary by season, variety, and management practice.';
+
+  var displayAcres = useHectares ? Math.round(totalAcres*HA*10)/10 : Math.round(totalAcres);
+  set('op_acres', displayAcres+(useHectares?' ha':' ac'));
+  set('op_trees', Math.round(totalTrees).toLocaleString());
+  set('op_varieties', vdata.length + (vdata.length===1?' variety':' varieties'));
+  var rd = REGION_DATA[currentRegion]||REGION_DATA.WA;
+  set('op_region_label', rd.label+' · '+rd.currency);
+  set('op_labor', '$'+labor+'/hr');
+  var wtdBins = totalAcres > 0 ? (vdata.reduce(function(s,vd){ return s + vd.acres*vd.bins; }, 0) / totalAcres) : 0;
+  set('op_bins', wtdBins.toFixed(1)+' bins/'+(useHectares?'ha':'ac')+' (wtd avg)');
+
+  // ── Variety blocks table ──
+  var vbody = document.getElementById('op_variety_body');
+  var totalBlockROI = 0;
+  vbody.innerHTML = '';
+  vdata.forEach(function(vd,i){
+    var r=results[i];
+    totalBlockROI += r.total;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>'+( vd.name||'—' )+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+(useHectares ? Math.round(vd.acres*HA*10)/10 : Math.round(vd.acres))+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+Math.round(vd.bins)+'</td>'
+      +'<td style="text-align:right;font-weight:600">$'+vd.price+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+fmt(r.revenue)+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:#5454E7">'+fmt(r.total)+'</td>';
+    vbody.appendChild(tr);
+  });
+  // Total row
+  var totTr = document.createElement('tr');
+  totTr.className = 'op-vt-total';
+  totTr.innerHTML = '<td>Total</td>'
+    +'<td style="text-align:right">'+(useHectares ? Math.round(totalAcres*HA*10)/10 : Math.round(totalAcres))+'</td>'
+    +'<td></td>'
+    +'<td></td>'
+    +'<td style="text-align:right">'+fmt(totalRevenue)+'</td>'
+    +'<td style="text-align:right">'+fmt(totalBlockROI)+'</td>';
+  vbody.appendChild(totTr);
+
+  // ── Use case ROIs ──
+  set('op_clm_roi', fmt(clm_tot)); set('op_clm_prune', fmt(clm_prune)); set('op_clm_ht', fmt(clm_ht)); set('op_clm_pp', fmt(clm_pp));
+  set('op_sp_roi', fmt(sp_tot)); set('op_sp_chem', fmt(sp_cs)); set('op_sp_pack', fmt(sp_po));
+  set('op_ft_roi', fmt(ft_tot)); set('op_ft_save', fmt(ft_is)); set('op_ft_yield', fmt(ft_yg));
+  set('op_yf_roi', fmt(yf_tot));
+  set('op_yf_store', fmt(yf_store_s)); set('op_yf_spoil', fmt(yf_spoil_s));
+  set('op_yf_pk', fmt(yf_pk_s)); set('op_yf_pktiming', fmt(yf_pk_pp));
+  set('op_yf_pkg', fmt(yf_pkg_s)); set('op_yf_spec', fmt(yf_spec_s));
+  // Show/hide one-pager cards based on N/A state
+  var cardIds2 = ['op-card-clm','op-card-sp','op-card-ft','op-card-yf'];
+  cardIds2.forEach(function(cid,i){ var el=document.getElementById(cid); if(el) el.style.display=naState[i]?'none':''; });
+  // YF sub-section preview hide/show
+  ['store','pk','pkg'].forEach(function(sub){
+    var block = document.getElementById('op-yf-'+sub+'-block');
+    if(block) block.style.display = yfNaState[sub] ? 'none' : '';
+  });
+
+
+  // ── Ranked by variety ──
+  var ranked = vdata.map(function(vd,i){
+    return {vd:vd, r:results[i]};
+  }).sort(function(a,b){ return b.r.total - a.r.total; });
+
+  var rbody = document.getElementById('op_ranked_body');
+  rbody.innerHTML = '';
+  ranked.forEach(function(item, rank){
+    var vd=item.vd, r=item.r;
+    var badgeClass = rank===0?'rank-1':rank===1?'rank-2':rank===2?'rank-3':'rank-n';
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><span class="rank-badge '+badgeClass+'">'+(rank+1)+'</span>'+(vd.name||'—')+'</td>'
+      +'<td style="text-align:right">'+(useHectares ? Math.round(vd.acres*HA*10)/10 : Math.round(vd.acres))+'</td>'
+      +'<td style="text-align:right">$'+vd.price+'</td>'
+      +'<td style="text-align:right">'+fmtS(r.clm_tot)+'</td>'
+      +'<td style="text-align:right">'+fmtS(r.sp_tot)+'</td>'
+      +'<td style="text-align:right">'+fmtS(r.ft_tot)+'</td>'
+      +'<td style="text-align:right">'+fmtS(r.yf_tot)+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:#5454E7">'+fmt(r.total)+'</td>'
+      +'<td style="text-align:right;color:#1F1F3B">'+fmt((useHectares?vd.acres*HA:vd.acres)>0?Math.round(r.total/(useHectares?vd.acres*HA:vd.acres)):0)+'</td>';
+    rbody.appendChild(tr);
+  });
+
+  // ── Bar chart (use cases) ──
+  var barItems = [
+    {label:'Crop load mgmt', val:clm_tot, color:'#5454E7'},
+    {label:'Spray thinning',  val:sp_tot,  color:'#B4BDFF'},
+    {label:'Fertilizer',      val:ft_tot,  color:'#E7E754'},
+    {label:'Yield forecasting',val:yf_tot, color:'#FF7961'},
+  ];
+  barItems.sort(function(a,b){return b.val-a.val;});
+  var maxBar = barItems[0].val || 1;
+  var barHtml = '';
+  barItems.forEach(function(item){
+    var pct = Math.max(2, Math.round((item.val/maxBar)*100));
+    barHtml += '<div class="op-bar-row"><div class="op-bar-lbl">'+item.label+'</div>'
+      +'<div class="op-bar-track"><div class="op-bar-fill" style="width:'+pct+'%;background:'+item.color+'"></div></div>'
+      +'<div class="op-bar-val">'+fmtS(item.val)+'</div></div>';
+  });
+  document.getElementById('op_bars').innerHTML = barHtml;
+
+  // ── Summary panel ──
+  set('op_gross', fmt(gross)); set('op_xv', fmt(lease));
+  document.getElementById('op_net').textContent = fmt(net);
+  document.getElementById('op_net').style.color = net>=0?'#E7E754':'#FF7961';
+  var perAreaDivisor = useHectares ? totalAcres*HA : totalAcres;
+  set('op_peracre', perAreaDivisor>0?fmt(Math.round(net/perAreaDivisor)):'—');
+
+  // ── Top 3 recommendations ──
+  var ucDefs = [
+    { key:'clm', label:'Crop load mgmt',    desc: function(vd,r){ return 'Per-tree bud counts and fruit counts across '+(useHectares?Math.round(vd.acres*HA*10)/10:Math.round(vd.acres))+(useHectares?' ha':' acres')+' guide pruning and hand thinning crews precisely — reducing labor cost and improving crop load uniformity for better size and pack-out.'; } },
+    { key:'sp',  label:'Spray thinning',    desc: function(vd,r){ return 'Flower cluster and fruitlet counts across '+Math.round(vd.acres)+' acres enable variable-rate PGR application — reducing chemical spend and improving fruit set uniformity.'; } },
+    { key:'ft',  label:'Fertilizer',        desc: function(vd,r){ return 'Vigor and fruit count/vigor maps across '+Math.round(vd.acres)+' acres direct inputs to under-supported trees and reduce waste in high-vigor zones.'; } },
+    { key:'yf',  label:'Yield forecasting', desc: function(vd,r){ return 'Yield, size and maturity forecasts across '+Math.round(vd.acres)+' acres optimize storage booking, picking schedules, and packaging orders — reducing costs and improving returns at harvest.'; } },
+  ];
+  var allCombos = [];
+  vdata.forEach(function(vd,i){
+    var r = results[i];
+    ucDefs.forEach(function(uc){
+      var roi = r[uc.key+'_tot'];
+      if(roi > 0) allCombos.push({vd:vd, r:r, uc:uc, roi:roi});
+    });
+  });
+  allCombos.sort(function(a,b){ return b.roi - a.roi; });
+  var top3 = allCombos.slice(0,3);
+  var rankClasses = ['top3-rank-1','top3-rank-2','top3-rank-3'];
+  var top3Html = '<div class="op-section-label">Top 3 opportunities this season</div>';
+  top3.forEach(function(item, idx){
+    top3Html += '<div class="top3-card">'
+      + '<div class="top3-rank '+rankClasses[idx]+'">'+(idx+1)+'</div>'
+      + '<div class="top3-body">'
+      + '<div class="top3-title">'+item.uc.label+' &nbsp;—&nbsp; <span>'+(item.vd.name||'Block')+'</span></div>'
+      + '<div class="top3-desc">'+item.uc.desc(item.vd, item.r)+'</div>'
+      + '</div>'
+      + '<div class="top3-roi">'+fmt(item.roi)+'</div>'
+      + '</div>';
+  });
+  document.getElementById('op_top3').innerHTML = top3Html;
+
+  // ── Assumptions ──
+  set('as_tpa', tpa.toLocaleString()+' trees/ac');
+  set('as_labor', '$'+labor+'/hr');
+  var sprayNote = v('s_passes')+' passes · $'+(v('s_pgr')+(s_app_ac||0)).toFixed(0)+'/ac/pass'; set('as_spray', sprayNote);
+  var areaLbl = useHectares ? 'ha' : 'acre';
+  set('as_phrs', '$'+v('clm_prune_ac')+'/'+areaLbl);
+  set('as_fert', '$'+v('f_cost')+'/'+areaLbl);
+  set('as_acres', displayAcres+(useHectares?' ha':' ac'));
+  set('as_hhrs', '$'+v('clm_ht_ac')+'/'+areaLbl);
+  set('as_lease', fmt(lease));
+  set('as_store', '$'+v('yf_store_cost')+'/bin/mo');
+  set('as_pkg',   '$'+v('yf_pkg_ac')+'/'+areaLbl);
+}
+
+function setTab(i){
+  activeTab=i;
+  document.querySelectorAll('.uc-tab').forEach(function(t,j){ t.classList.toggle('active',j===i); });
+  document.querySelectorAll('.uc-panel').forEach(function(p,j){ p.classList.toggle('active',j===i); });
+}
+
+function resetDefaults(){
+  Object.keys(DEFAULTS).forEach(function(k){
+    var el=document.getElementById(k); if(el) el.value=DEFAULTS[k];
+  });
+  document.getElementById('grower_name').value='';
+  // Reset varieties
+  varieties.slice().forEach(function(id){ removeVariety(id); });
+  DEFAULT_VARIETIES.forEach(function(dv){ addVariety(dv.name, dv.acres, dv.price, dv.bins); });
+}
+
+// Wire farm-level inputs
+document.querySelectorAll('#tpa,#labor,#lease,#clm_prune_ac,#clm_prune_eff,#clm_ht_ac,#clm_ht_skip,#clm_ht_eff,#clm_prem,#s_passes,#s_pgr,#s_tractor,#s_red,#s_pack,#f_cost,#f_red,#f_yield,#yf_store_cost,#yf_store_months,#yf_store_over,#yf_store_spoil,#yf_pk_mob,#yf_pk_passes,#yf_pk_red,#yf_pk_prem,#yf_pkg_ac,#yf_pkg_rush,#yf_pkg_pct,#yf_pkg_pen,#yf_pkg_spec,#grower_name').forEach(function(el){
+  el.addEventListener('input', calc);
+});
+
+// Init with defaults
+DEFAULT_VARIETIES.forEach(function(dv){ addVariety(dv.name, dv.acres, dv.price, dv.bins); });
+// Set initial region note
+applyRegion('WA');
+</script>
+<datalist id="variety-list">
+  <option value="Honeycrisp">
+  <option value="Cosmic Crisp">
+  <option value="Gala">
+  <option value="Pink Lady">
+  <option value="Golden Delicious">
+  <option value="Fuji">
+  <option value="Granny Smith">
+  <option value="Rave">
+  <option value="Ambrosia">
+  <option value="Jonagold">
+  <option value="Paula Red">
+  <option value="Empire">
+  <option value="Cortland">
+  <option value="Macintosh">
+  <option value="Red Delicious">
+</datalist>
+</body>
+</html>
