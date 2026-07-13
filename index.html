@@ -5,7 +5,199 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>vivid machines. — Grower ROI Tool v2</title>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Source Sans Pro', sans-serif; background: #F2F2F2; color: #1F1F3B; font-size: 13px; height: 100vh; overflow: hidden; }
+
+/* App bar */
+.app-bar { height: 48px; background: #1F1F3B; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; z-index: 10; }
+.app-bar-logo { font-size: 15px; font-weight: 700; color: #5454E7; letter-spacing: .02em; }
+.app-bar-title { font-size: 11px; color: #B4BDFF; font-weight: 600; letter-spacing: .04em; }
+.btn-pdf { background: #5454E7; color: white; border: none; border-radius: 6px; padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; letter-spacing: .02em; transition: background .15s; }
+.btn-pdf:hover { background: #4040C8; }
+.btn-secondary { background: rgba(180,189,255,.12); color: #B4BDFF; border: 0.5px solid rgba(180,189,255,.3); border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
+.btn-secondary:hover { background: rgba(180,189,255,.2); }
+
+/* Columns */
+.columns { display: flex; height: calc(100vh - 48px); }
+.col-calc { width: 390px; flex-shrink: 0; background: white; border-right: 1px solid #EBEBEB; overflow-y: auto; padding: 18px 18px 32px; }
+.col-preview { flex: 1; background: #F2F2F2; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 20px 20px 40px; }
+.preview-label { font-size: 10px; font-weight: 700; color: #5454E7; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 12px; opacity: .6; align-self: flex-start; }
+
+/* Calc components */
+.section-label { font-size: 9px; font-weight: 700; color: #5454E7; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 8px; }
+.field-group { background: white; border: 0.5px solid #E4E6FF; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.field-label { font-size: 10px; color: #5454E7; font-weight: 700; margin-bottom: 4px; letter-spacing: .02em; }
+input[type=number], input[type=text] { background: white; border: 0.5px solid #B4BDFF; border-radius: 6px; padding: 5px 8px; font-size: 12px; color: #1F1F3B; width: 100%; font-family: inherit; font-weight: 600; }
+input[type=number]:focus, input[type=text]:focus { outline: none; border-color: #5454E7; box-shadow: 0 0 0 2px rgba(84,84,231,.12); }
+input[type=text]::placeholder { font-weight: 400; color: #aaa; }
+
+.field-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.field-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+/* Variety rows */
+.variety-table { width: 100%; border-collapse: collapse; }
+.variety-table th { font-size: 9px; font-weight: 700; color: #5454E7; letter-spacing: .06em; text-transform: uppercase; padding: 0 6px 6px; text-align: left; }
+.variety-table th:last-child { width: 28px; }
+.variety-row td { padding: 3px 4px; vertical-align: middle; }
+.variety-row td:last-child { width: 28px; text-align: center; }
+.btn-remove { background: none; border: none; cursor: pointer; color: #B4BDFF; font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px; transition: color .15s; }
+.btn-remove:hover { color: #FF7961; }
+.btn-add { background: none; border: 0.5px dashed #B4BDFF; border-radius: 6px; color: #5454E7; font-size: 11px; font-weight: 700; padding: 6px 12px; cursor: pointer; font-family: inherit; width: 100%; margin-top: 8px; transition: background .15s; }
+.btn-add:hover { background: #F7F7FF; }
+
+/* Use case tabs */
+.uc-tabs { display: flex; border-bottom: 1px solid #EBEBEB; margin: 0 -18px 12px; padding: 0 18px; }
+.uc-tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 4px 7px; font-size: 11px; font-weight: 600; color: #1F1F3B; opacity: .45; cursor: pointer; font-family: inherit; transition: opacity .15s; text-align: center; }
+.uc-tab.active { border-bottom-color: #5454E7; color: #5454E7; opacity: 1; }
+.uc-panel { display: none; }
+.uc-panel.active { display: block; }
+.uc-roi-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.uc-roi-label { font-size: 9px; font-weight: 700; color: #5454E7; text-transform: uppercase; letter-spacing: .06em; }
+.uc-roi-value { font-size: 20px; font-weight: 700; color: #5454E7; }
+.bd-line { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 0.5px solid #F0F0F0; }
+.bd-line:last-child { border-bottom: none; }
+.bd-line span:last-child { font-weight: 700; }
+
+/* Calc summary */
+.calc-summary { background: #1F1F3B; border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
+.cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cs-label { font-size: 9px; font-weight: 700; color: #B4BDFF; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 3px; }
+.cs-value { font-size: 16px; font-weight: 700; }
+.farm-summary { font-size: 11px; color: #5454E7; font-weight: 600; margin-top: 8px; padding-top: 8px; border-top: 0.5px solid #E8E8F0; }
+
+/* ── One-pager ── */
+.onepager { background: white; width: 100%; max-width: 720px; padding: 32px 36px 28px; border-radius: 8px; box-shadow: 0 2px 16px rgba(84,84,231,.1); }
+
+.op-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 14px; border-bottom: 2px solid #5454E7; margin-bottom: 18px; }
+.op-logo { font-size: 17px; font-weight: 700; color: #5454E7; letter-spacing: .02em; }
+.op-doc-title { font-size: 13px; font-weight: 700; color: #1F1F3B; text-align: right; }
+.op-doc-sub { font-size: 10px; color: #5454E7; text-align: right; margin-top: 2px; }
+
+.op-profile { background: #1F1F3B; border-radius: 7px; padding: 10px 14px; display: grid; grid-template-columns: repeat(5, 1fr); margin-bottom: 14px; }
+.op-pi { padding: 0 10px; border-right: 0.5px solid rgba(180,189,255,.2); }
+.op-pi:first-child { padding-left: 0; }
+.op-pi:last-child { border-right: none; }
+.op-pi-label { font-size: 8px; font-weight: 700; color: #B4BDFF; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 2px; }
+.op-pi-value { font-size: 12px; font-weight: 700; color: white; }
+
+.op-intro { font-size: 11px; color: #1F1F3B; line-height: 1.6; margin-bottom: 16px; padding: 10px 14px; background: #F7F7FF; border-left: 3px solid #5454E7; border-radius: 0 6px 6px 0; }
+.op-section-label { font-size: 9px; font-weight: 700; color: #5454E7; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 8px; }
+
+/* Variety blocks table */
+.op-variety-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+.op-variety-table th { font-size: 9px; font-weight: 700; color: #5454E7; text-transform: uppercase; letter-spacing: .06em; padding: 0 10px 6px; text-align: left; border-bottom: 1px solid #E4E6FF; }
+.op-variety-table th:not(:first-child) { text-align: right; }
+.op-variety-table td { padding: 6px 10px; border-bottom: 0.5px solid #F0F0F0; color: #1F1F3B; }
+.op-variety-table td:not(:first-child) { text-align: right; font-weight: 600; }
+.op-variety-table tr:last-child td { border-bottom: none; }
+.op-vt-total td { font-weight: 700; border-top: 1px solid #E4E6FF; border-bottom: none; color: #5454E7; }
+
+/* Use case cards */
+.op-uc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.op-uc-card { border: 0.5px solid #E4E6FF; border-radius: 8px; padding: 11px 13px; }
+.op-uc-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.op-uc-name { font-size: 12px; font-weight: 700; color: #1F1F3B; }
+.op-uc-roi { font-size: 15px; font-weight: 700; color: #5454E7; }
+.op-uc-body { font-size: 10px; color: #1F1F3B; opacity: .65; line-height: 1.5; margin-bottom: 7px; }
+.op-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
+.op-pill { font-size: 9px; font-weight: 700; background: white; color: #5454E7; border: 0.5px solid #B4BDFF; border-radius: 20px; padding: 2px 7px; }
+.op-breakdown { border-top: 0.5px solid #EFEFEF; padding-top: 6px; }
+.op-bd-row { display: flex; justify-content: space-between; font-size: 10px; color: #1F1F3B; opacity: .6; line-height: 1.9; }
+.op-bd-row span:last-child { font-weight: 700; opacity: 1; }
+
+/* Ranked list */
+.op-ranked-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+.op-ranked-table th { font-size: 9px; font-weight: 700; color: #5454E7; text-transform: uppercase; letter-spacing: .06em; padding: 0 10px 6px; text-align: left; border-bottom: 1px solid #E4E6FF; }
+.op-ranked-table th:not(:first-child) { text-align: right; }
+.op-ranked-table td { padding: 7px 10px; border-bottom: 0.5px solid #F0F0F0; }
+.op-ranked-table td:not(:first-child) { text-align: right; font-weight: 600; }
+.op-ranked-table tr:last-child td { border-bottom: none; }
+.rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-size: 9px; font-weight: 700; margin-right: 6px; }
+.rank-1 { background: #5454E7; color: white; }
+.rank-2 { background: #B4BDFF; color: #1F1F3B; }
+.rank-3 { background: #E4E6FF; color: #1F1F3B; }
+.rank-n { background: #F0F0F0; color: #888; }
+
+/* Bar chart */
+.op-bar-section { margin-bottom: 14px; }
+.op-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.op-bar-lbl { font-size: 10px; font-weight: 700; color: #1F1F3B; width: 90px; flex-shrink: 0; }
+.op-bar-track { flex: 1; background: #F3F3F3; border-radius: 3px; height: 12px; }
+.op-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+.op-bar-val { font-size: 10px; font-weight: 700; color: #1F1F3B; width: 66px; text-align: right; flex-shrink: 0; }
+
+/* ROI panel */
+.op-roi-panel { background: #1F1F3B; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; }
+.op-roi-label { font-size: 9px; font-weight: 700; color: #B4BDFF; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+.op-roi-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+.op-roi-item { padding: 0 12px; border-right: 0.5px solid rgba(180,189,255,.2); }
+.op-roi-item:first-child { padding-left: 0; }
+.op-roi-item:last-child { border-right: none; }
+.op-roi-item-label { font-size: 8px; font-weight: 700; color: #B4BDFF; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.op-roi-item-value { font-size: 17px; font-weight: 700; }
+
+/* Assumptions */
+.op-assumptions { border: 0.5px solid #E4E6FF; border-radius: 7px; padding: 12px 14px; margin-bottom: 14px; background: white; }
+.op-assum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 16px; margin-top: 8px; }
+.op-assum-row { display: flex; justify-content: space-between; font-size: 10px; border-bottom: 0.5px solid rgba(84,84,231,.08); padding: 3px 0; }
+.op-assum-row span:first-child { color: #1F1F3B; opacity: .6; }
+.op-assum-row span:last-child { font-weight: 700; }
+.op-footer { display: flex; justify-content: space-between; font-size: 9px; color: #1F1F3B; opacity: .35; padding-top: 10px; border-top: 0.5px solid #E4E6FF; }
+
+/* N/A toggle */
+.uc-tab-wrap { flex:1; display:flex; flex-direction:column; align-items:stretch; position:relative; }
+.uc-tab-na { font-size:9px; font-weight:700; color:#B4BDFF; background:none; border:none; cursor:pointer; font-family:inherit; padding:2px 0 3px; text-align:center; letter-spacing:.04em; transition:color .15s; }
+.uc-tab-na:hover { color:#FF7961; }
+.uc-tab.na-tab { opacity:.3; text-decoration:line-through; }
+.na-overlay { display:none; align-items:center; justify-content:center; padding:18px; color:#B4BDFF; font-size:12px; font-weight:600; text-align:center; flex-direction:column; gap:8px; }
+.na-overlay button { background:none; border:0.5px solid #B4BDFF; border-radius:6px; padding:5px 14px; font-size:11px; font-weight:700; color:#5454E7; cursor:pointer; font-family:inherit; }
+.na-overlay button:hover { background:#F7F7FF; }
+/* YF sub-section N/A */
+.yf-subsec-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; margin-top:4px; }
+.yf-subsec-label { font-size:10px; font-weight:700; color:#1F1F3B; opacity:.5; text-transform:uppercase; letter-spacing:.06em; }
+.yf-na-btn { font-size:9px; font-weight:700; color:#B4BDFF; background:none; border:0.5px solid #E4E6FF; border-radius:4px; padding:2px 8px; cursor:pointer; font-family:inherit; letter-spacing:.03em; transition:all .15s; }
+.yf-na-btn:hover { border-color:#FF7961; color:#FF7961; }
+.yf-na-btn.active { background:#FFF0EE; border-color:#FF7961; color:#FF7961; }
+.yf-na-overlay { display:none; background:#FAFAFA; border:0.5px solid #E4E6FF; border-radius:8px; padding:12px; text-align:center; font-size:11px; color:#B4BDFF; margin-bottom:8px; }
+.yf-na-overlay button { background:none; border:0.5px solid #B4BDFF; border-radius:5px; padding:3px 12px; font-size:10px; font-weight:700; color:#5454E7; cursor:pointer; font-family:inherit; margin-top:6px; }
+/* Unit toggle */
+.unit-toggle { display:flex; align-items:center; gap:6px; }
+.unit-toggle-btn { background:white; border:0.5px solid #B4BDFF; border-radius:20px; padding:4px 12px; font-size:10px; font-weight:700; color:#1F1F3B; cursor:pointer; font-family:inherit; transition:all .15s; }
+.unit-toggle-btn.active { background:#5454E7; border-color:#5454E7; color:white; }
+.unit-toggle-label { font-size:10px; color:#B4BDFF; font-weight:600; }
+/* Region selector */
+.region-bar { display:flex; gap:6px; margin-bottom:10px; }
+.region-btn { flex:1; background:white; border:0.5px solid #B4BDFF; border-radius:6px; padding:6px 4px; font-size:11px; font-weight:700; color:#1F1F3B; cursor:pointer; font-family:inherit; transition:all .15s; text-align:center; }
+.region-btn:hover { border-color:#5454E7; color:#5454E7; }
+.region-btn.active { background:#5454E7; border-color:#5454E7; color:white; }
+.currency-badge { display:inline-block; font-size:9px; font-weight:700; background:#1F1F3B; color:#B4BDFF; border-radius:4px; padding:2px 6px; letter-spacing:.05em; margin-left:6px; vertical-align:middle; }
+
+/* Top 3 recommendations */
+.top3-card { display:flex; align-items:flex-start; gap:12px; padding:11px 14px; border:0.5px solid #E4E6FF; border-radius:8px; margin-bottom:8px; }
+.top3-card:last-child { margin-bottom:0; }
+.top3-rank { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; margin-top:1px; }
+.top3-rank-1 { background:#5454E7; color:white; }
+.top3-rank-2 { background:#B4BDFF; color:#1F1F3B; }
+.top3-rank-3 { background:#E4E6FF; color:#5454E7; }
+.top3-body { flex:1; }
+.top3-title { font-size:12px; font-weight:700; color:#1F1F3B; margin-bottom:3px; }
+.top3-title span { color:#5454E7; }
+.top3-desc { font-size:10px; color:#1F1F3B; opacity:.65; line-height:1.55; }
+.top3-roi { font-size:14px; font-weight:700; color:#5454E7; flex-shrink:0; white-space:nowrap; margin-top:1px; }
+
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+  body { background: white; overflow: visible; height: auto; }
+  .app-bar, .col-calc, .col-preview > .preview-label { display: none !important; }
+  .columns { height: auto; display: block; }
+  .col-preview { background: white; padding: 0; display: block; overflow: visible; }
+  .onepager { max-width: 100%; width: 100%; padding: 18px 26px; box-shadow: none; border-radius: 0; }
+  .op-page2 { page-break-before: always; padding-top: 6px; }
+  .op-p2-header { display: flex !important; }
+  @page { margin: 10mm 12mm; size: letter; }
+}
+</style>
 </head>
 <body>
 
@@ -34,6 +226,7 @@
       <button class="region-btn" id="rbtn-NY" onclick="applyRegion('NY')">NY <span style="font-weight:400;opacity:.6">New York</span></button>
       <button class="region-btn" id="rbtn-MX" onclick="applyRegion('MX')">MX <span style="font-weight:400;opacity:.6">Mexico</span></button>
       <button class="region-btn" id="rbtn-MI" onclick="applyRegion('MI')">MI <span style="font-weight:400;opacity:.6">Michigan</span></button>
+      <button class="region-btn" id="rbtn-NZ" onclick="applyRegion('NZ')">NZ <span style="font-weight:400;opacity:.6">N. Zealand</span></button>
       <button class="region-btn" id="rbtn-ON" onclick="applyRegion('ON')">ON <span style="font-weight:400;opacity:.6">Ontario</span></button>
     </div>
     <div id="region-note" style="font-size:10px;color:#5454E7;font-weight:600"></div>
@@ -70,8 +263,8 @@
         <tr>
           <th style="width:32%">Block / variety</th>
           <th style="width:18%" id="lbl-calc-acres">Acres</th>
-          <th style="width:22%">$/bin</th>
-          <th style="width:18%" id="lbl-bins-col">Bins/acre</th>
+          <th style="width:22%" id="lbl-col-price-unit" data-yield-label="$/{unit}">$/bin</th>
+          <th style="width:18%" id="lbl-bins-col" data-yield-label="Bins/{u}">Bins/acre</th>
           <th></th>
         </tr>
       </thead>
@@ -97,7 +290,7 @@
     </div>
     <div class="uc-tab-wrap">
       <button class="uc-tab" id="tab3" onclick="setTab(3)">Yield fcst.</button>
-      <div style="height:20px"></div>
+      <button class="uc-tab-na" id="na3" onclick="toggleNA(3)" title="Mark as N/A">N/A</button>
     </div>
   </div>
 
@@ -277,8 +470,8 @@
       <thead><tr>
         <th>Block / variety</th>
         <th id="lbl-vt-acres">Acres</th>
-        <th id="lbl-vt-bins-ac">Bins / acre</th>
-        <th>Fruit returns ($/bin)</th>
+        <th id="lbl-vt-bins-ac" data-yield-label="Bins / {unit} area">Bins / acre</th>
+        <th id="lbl-op-price-unit" data-yield-label="Fruit returns ($/{unit})">Fruit returns ($/bin)</th>
         <th>Revenue baseline</th>
         <th>Block ROI</th>
       </tr></thead>
@@ -470,7 +663,16 @@ var REGION_VARIETY_PRESETS = {
     'Golden Delicious': {price:20, bins:48},
     'Red Delicious':    {price:15, bins:40},
   },
-  ON: {
+  NZ: {
+    'Envy':           {price:110, bins:24.3},
+    'Jazz':           {price:84,  bins:23.5},
+    'Royal Gala':     {price:55,  bins:22.3},
+    'Pacific Rose':   {price:72,  bins:22.3},
+    'Cripps Pink':    {price:70,  bins:21.0},
+    'Fuji':           {price:60,  bins:22.3},
+    'Braeburn':       {price:40,  bins:20.2},
+  },
+    ON: {
     'Honeycrisp':       {price:52, bins:48},
     'Rave':             {price:52, bins:42},
     'Ambrosia':         {price:55, bins:45},
@@ -495,6 +697,8 @@ var REGION_DATA = {
         defaultVarieties: [{name:'Gala',acres:100},{name:'Golden Delicious',acres:80},{name:'Red Delicious',acres:80}] },
   MI: { label:'Michigan',         currency:'USD', labor:17.09, tractor:75, pgr:52, fert:310,
         defaultVarieties: [{name:'Honeycrisp',acres:60},{name:'Gala',acres:80},{name:'McIntosh',acres:60}] },
+  NZ: { label:'New Zealand',      currency:'NZD', labor:23.15, tractor:100, pgr:40, fert:243, unitLabel:'carton',
+        defaultVarieties:[{name:'Royal Gala',acres:32},{name:'Envy',acres:20},{name:'Jazz',acres:16}] },
   ON: { label:'Ontario',          currency:'CAD', labor:19.00, tractor:88, pgr:65, fert:390,
         defaultVarieties: [{name:'Honeycrisp',acres:50},{name:'Empire',acres:60},{name:'Macintosh',acres:50}] },
 };
@@ -549,7 +753,6 @@ function toggleYFSub(sub){
     var bl = document.getElementById('yf-bdline-'+sub+n);
     if(bl) bl.style.display = on ? 'none' : '';
   });
-  updateUnitLabels();
   calc();
 }
 
@@ -591,7 +794,7 @@ function applyRegion(code){
   var rd = REGION_DATA[code];
   if(!rd) return;
   // Update buttons
-  ['WA','NY','MX','MI','ON'].forEach(function(r){
+  ['WA','NY','MX','MI','NZ','ON'].forEach(function(r){
     var b = document.getElementById('rbtn-'+r);
     if(b) b.classList.toggle('active', r===code);
   });
@@ -605,6 +808,8 @@ function applyRegion(code){
     WA: {prune:320,  ht:1000,  store:4.5,  pk_mob:1800,  pkg_ac:120},
     NY: {prune:300,  ht:1000,  store:4.0,  pk_mob:1600,  pkg_ac:110},
     MX: {prune:175,  ht:590,   store:3.25, pk_mob:1300,  pkg_ac:105},
+    NZ: {prune:304,  ht:607,   store:3.50, pk_mob:2200,  pkg_ac:97},
+    NZ: {prune:304,  ht:607,   store:3.50, pk_mob:2200,  pkg_ac:97},
     MI: {prune:300,  ht:1000,  store:4.2,  pk_mob:1700,  pkg_ac:115},
     ON: {prune:350,  ht:1100,  store:5.0,  pk_mob:2000,  pkg_ac:140},
   };
@@ -621,7 +826,7 @@ function applyRegion(code){
   if(pkgAcEl) pkgAcEl.value = clmD.pkg_ac;
   // Currency note
   var note = document.getElementById('region-note');
-  var leaseDefaults = { WA:25000, NY:25000, MX:25000, MI:25000, ON:32000 };
+  var leaseDefaults = { WA:25000, NY:25000, MX:25000, MI:25000, NZ:40000, ON:32000 };
   var leaseEl = document.getElementById('lease');
   if(leaseEl) leaseEl.value = leaseDefaults[code] || 25000;
   if(note) note.innerHTML = rd.label + ' &nbsp;·&nbsp; <span class="currency-badge">'+rd.currency+'</span>';
@@ -676,6 +881,7 @@ function setUnit(unit){
 
   // Update labels
   updateUnitLabels();
+  updateYieldUnitLabels();
   calc();
 }
 
@@ -692,15 +898,15 @@ function updateUnitLabels(){
     'lbl-pgr-total':   'Total PGR program cost / '+u+' ($)',
     'lbl-fert-ac':     'Annual fertilizer & nutrition cost / '+u+' ($)',
     'lbl-pkg-ac':      'Packaging cost / '+u+' ($)',
-    'lbl-bins-col':    'Bins/'+uShort,
+    'lbl-bins-col':    useCartons ? (useHectares ? 'Cartons/ha' : 'Cartons/ac') : 'Bins/'+uShort,
     'lbl-op-acres':    'Total '+uCap.toLowerCase(),
-    'lbl-op-bins':     'Avg bins / '+u,
+    'lbl-op-bins':     useCartons ? 'Avg cartons / ha' : 'Avg bins / '+u,
     'lbl-roi-per-area':'Net ROI per '+u,
     'lbl-as-tpa':      'Trees per '+u,
     'lbl-as-acres':    'Total '+uCap.toLowerCase(),
     // One-pager tables and sidebar
     'lbl-vt-acres':    uCap,
-    'lbl-vt-bins-ac':  'Bins / '+u,
+    'lbl-vt-bins-ac':  useCartons ? 'Cartons / ha' : 'Bins / '+u,
     'lbl-rt-acres':    uCap,
     'lbl-rt-roi-ac':   'ROI / '+u,
     'lbl-cs-acre':     'Per '+u,
@@ -715,6 +921,36 @@ function updateUnitLabels(){
     var el = document.getElementById(id);
     if(el) el.textContent = labelMap[id];
   });
+}
+
+var useCartons = false;
+
+function updateYieldUnitLabels(){
+  var isCarton = useCartons;
+  var unit = isCarton ? 'carton' : 'bin';
+  var unitPl = isCarton ? 'cartons' : 'bins';
+  var unitHa = isCarton ? 'cartons/ha' : 'bins/ha';
+  var unitAc = isCarton ? 'cartons/ac' : 'bins/ac';
+
+  // Calc panel labels
+  var u  = useHectares ? 'ha' : 'ac';
+  var ids = {
+    // Actual IDs present in both app versions
+    'lbl-col-bins':     isCarton ? 'Cartons/'+u  : 'Bins/'+u,
+    'lbl-bins-col':     isCarton ? 'Cartons/'+u  : 'Bins/'+u,   // v2 app uses this ID
+    'lbl-op-bins':      isCarton ? 'Avg cartons / ha' : 'Avg bins / '+u,
+    'lbl-vt-bins-ac':   isCarton ? 'Cartons/ha'  : 'Bins / '+u,
+    'lbl-vt-price':     isCarton ? 'Fruit returns ($/carton)' : 'Fruit returns ($/bin)',
+  };
+  // Also handle data-yield-label template elements (e.g. lbl-col-price-unit)
+  document.querySelectorAll('[data-yield-label]').forEach(function(el){
+    el.textContent = el.dataset.yieldLabel.replace('{unit}', unit).replace('{units}', unitPl);
+  });
+  Object.keys(ids).forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = ids[id];
+  });
+
+
 }
 
 function saveCustomVariety(id){
@@ -805,12 +1041,14 @@ function updateAddBtn(){
 
 function getVarietyData(){
   return varieties.map(function(id){
+    var aVal = parseFloat((document.getElementById('a-'+id)||{}).value)||0;
+    var bVal = parseFloat((document.getElementById('b-'+id)||{}).value)||0;
     return {
       id: id,
       name: (document.getElementById('n-'+id)||{}).value || 'Block',
-      acres: parseFloat((document.getElementById('a-'+id)||{}).value)||0,
+      acres: useHectares ? aVal / HA : aVal,   // ha input → internal acres
+      bins:  useHectares ? bVal * HA  : bVal,   // bins/ha input → internal bins/acre
       price: parseFloat((document.getElementById('p-'+id)||{}).value)||0,
-      bins:  parseFloat((document.getElementById('b-'+id)||{}).value)||0
     };
   });
 }
@@ -877,17 +1115,19 @@ function calcVarietyROI(vd, tpa, labor,
 
 function calc(){
   var tpa=v('tpa'), labor=v('labor'), lease=v('lease');
-  var clm_prune_ac=v('clm_prune_ac'), clm_prune_eff=v('clm_prune_eff');
-  var clm_ht_ac=v('clm_ht_ac'), clm_ht_skip=v('clm_ht_skip'), clm_ht_eff=v('clm_ht_eff'), clm_prem=v('clm_prem');
-  var s_passes=v('s_passes'), s_pgr=v('s_pgr'), s_tractor=v('s_tractor'), s_red=v('s_red'), s_pack=v('s_pack');
+  // Per-area inputs: user sees $/ha in hectares mode — normalise back to $/acre for calc
+  var _ac = useHectares ? HA : 1;
+  var clm_prune_ac=v('clm_prune_ac')*_ac, clm_prune_eff=v('clm_prune_eff');
+  var clm_ht_ac=v('clm_ht_ac')*_ac, clm_ht_skip=v('clm_ht_skip'), clm_ht_eff=v('clm_ht_eff'), clm_prem=v('clm_prem');
+  var s_passes=v('s_passes'), s_pgr=v('s_pgr')*_ac, s_tractor=v('s_tractor'), s_red=v('s_red'), s_pack=v('s_pack');
   var s_app_ac = s_tractor > 0 ? s_tractor / ((7*5280*12)/43560) : 0;
   var appCalcEl=document.getElementById('s_app_calc'); if(appCalcEl) appCalcEl.value=s_app_ac.toFixed(2);
   var s_total_ac_disp=(s_pgr+s_app_ac)*s_passes;
   var sChemEl=document.getElementById('s_chem'); if(sChemEl) sChemEl.value=s_total_ac_disp.toFixed(2);
-  var f_cost=v('f_cost'), f_red=v('f_red'), f_yield=v('f_yield');
+  var f_cost=v('f_cost')*_ac, f_red=v('f_red'), f_yield=v('f_yield');
   var yf_store_cost=v('yf_store_cost'), yf_store_months=v('yf_store_months'), yf_store_over=v('yf_store_over'), yf_store_spoil=v('yf_store_spoil');
   var yf_pk_mob=v('yf_pk_mob'), yf_pk_passes=v('yf_pk_passes'), yf_pk_red=v('yf_pk_red'), yf_pk_prem=v('yf_pk_prem');
-  var yf_pkg_ac=v('yf_pkg_ac'), yf_pkg_rush=v('yf_pkg_rush'), yf_pkg_pct=v('yf_pkg_pct'), yf_pkg_pen=v('yf_pkg_pen'), yf_pkg_spec=v('yf_pkg_spec');
+  var yf_pkg_ac=v('yf_pkg_ac')*_ac, yf_pkg_rush=v('yf_pkg_rush'), yf_pkg_pct=v('yf_pkg_pct'), yf_pkg_pen=v('yf_pkg_pen'), yf_pkg_spec=v('yf_pkg_spec');
 
   var vdata = getVarietyData();
   var results = vdata.map(function(vd){ return calcVarietyROI(vd,tpa,labor,clm_prune_ac,clm_prune_eff,clm_ht_ac,clm_ht_skip,clm_ht_eff,clm_prem,s_passes,s_pgr,s_app_ac,s_red,s_pack,f_cost,f_red,f_yield,yf_store_cost,yf_store_months,yf_store_over,yf_store_spoil,yf_pk_mob,yf_pk_passes,yf_pk_red,yf_pk_prem,yf_pkg_ac,yf_pkg_rush,yf_pkg_pct,yf_pkg_pen,yf_pkg_spec); });
@@ -952,7 +1192,8 @@ function calc(){
   set('op_region_label', rd.label+' · '+rd.currency);
   set('op_labor', '$'+labor+'/hr');
   var wtdBins = totalAcres > 0 ? (vdata.reduce(function(s,vd){ return s + vd.acres*vd.bins; }, 0) / totalAcres) : 0;
-  set('op_bins', wtdBins.toFixed(1)+' bins/'+(useHectares?'ha':'ac')+' (wtd avg)');
+  var binsLabel = useCartons ? 'cartons/ha' : (useHectares ? 'bins/ha' : 'bins/ac');
+  set('op_bins', wtdBins.toFixed(1)+' '+binsLabel+' (wtd avg)');
 
   // ── Variety blocks table ──
   var vbody = document.getElementById('op_variety_body');
@@ -1128,6 +1369,11 @@ applyRegion('WA');
   <option value="Granny Smith">
   <option value="Rave">
   <option value="Ambrosia">
+  <option value="Envy">
+  <option value="Jazz">
+  <option value="Royal Gala">
+  <option value="Pacific Rose">
+  <option value="Braeburn">
   <option value="Jonagold">
   <option value="Paula Red">
   <option value="Empire">
